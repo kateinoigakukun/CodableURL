@@ -4,27 +4,28 @@ public protocol CodableURL: Codable {
     init()
 }
 
-extension CodableURL {
-    public static func decode(pathComponents: [String], queryParameter: @escaping (String) -> String?) throws -> Self {
+public extension CodableURL {
+    static func decode(pathComponents: [String], queryParameter: @escaping (String) -> String?) throws -> Self {
         let decoder = URLDecoder(
             definitionMap: Self.definitionMap(),
             pathComponents: pathComponents,
             queryParameter: queryParameter
         )
-        return try Self.init(from: decoder)
+        return try Self(from: decoder)
     }
-    
-    public func encode() throws -> (pathComponents: [String], queryParameters: [String: String]) {
+
+    func encode() throws -> (pathComponents: [String], queryParameters: [String: String]) {
         let encoder = URLEncoder(definitionMap: Self.definitionMap())
-        try self.encode(to: encoder)
+        try encode(to: encoder)
         return (encoder.pathComponents, encoder.queryParameters)
     }
 
-    static func definitionMap() -> [_CodingKey: Definition] {
-        let children = Mirror(reflecting: Self.init()).children
-        return children.reduce(into: [_CodingKey: Definition]()) { (result, element) in
+    internal static func definitionMap() -> [_CodingKey: Definition] {
+        let children = Mirror(reflecting: Self()).children
+        return children.reduce(into: [_CodingKey: Definition]()) { result, element in
             guard var key = element.label,
-                  let field = element.value as? DefinitionProvider else {
+                  let field = element.value as? DefinitionProvider
+            else {
                 return
             }
             // Property wrappers have underscore-prefixed names
@@ -44,7 +45,6 @@ internal enum WrapperState<Value> {
     case value(Value)
     case definition(Definition)
 }
-
 
 internal protocol DefinitionProvider {
     func provideDefinition() -> Definition
@@ -69,8 +69,9 @@ extension URLComponentWrapper {
 internal protocol OptionalProtocol {
     static func provideNil() -> Self
 }
+
 extension Optional: OptionalProtocol {
-    static func provideNil() -> Optional<Wrapped> { nil }
+    static func provideNil() -> Wrapped? { nil }
 }
 
 enum CodingError: Error {
@@ -89,8 +90,9 @@ internal struct _CodingKey: Hashable {
     init(rawValue: String) {
         self.rawValue = rawValue
     }
+
     init<C: CodingKey>(_ codingKey: C) {
-        self.rawValue = codingKey.stringValue
+        rawValue = codingKey.stringValue
     }
 }
 
@@ -99,7 +101,7 @@ public struct StaticPath: Codable, URLComponentWrapper {
     var wrapperState: WrapperState<Void>
 
     public init<S: StringProtocol>(_ components: S...) {
-        self.wrapperState = .definition(.staticPaths(components.map { String($0) }))
+        wrapperState = .definition(.staticPaths(components.map { String($0) }))
     }
 
     public init(from decoder: Decoder) throws {
@@ -119,9 +121,9 @@ public struct StaticPath: Codable, URLComponentWrapper {
             }
             components = components.dropFirst()
         }
-        self.wrapperState = .value(())
+        wrapperState = .value(())
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
@@ -137,12 +139,11 @@ public struct StaticPath: Codable, URLComponentWrapper {
     }
 }
 
-
 @propertyWrapper
 public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: LosslessStringConvertible {
     var wrapperState: WrapperState<Value>
     public init() {
-        self.wrapperState = .definition(.dynamicPath)
+        wrapperState = .definition(.dynamicPath)
     }
 
     public init(from decoder: Decoder) throws {
@@ -158,9 +159,9 @@ public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: Loss
         guard let value = Value(head) else {
             throw CodingError.invalidDynamicPathValue(head, forType: Value.self, forKey: context.key.rawValue)
         }
-        self.wrapperState = .value(value)
+        wrapperState = .value(value)
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
@@ -177,7 +178,7 @@ public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: Loss
     public var wrappedValue: Value {
         get {
             switch wrapperState {
-            case .value(let value):
+            case let .value(value):
                 return value
             case .definition:
                 fatalError()
@@ -189,12 +190,11 @@ public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: Loss
     }
 }
 
-
 @propertyWrapper
 public struct Query<Value>: Codable, URLComponentWrapper where Value: LosslessStringConvertible {
     var wrapperState: WrapperState<Value>
     public init(_ key: String? = nil, default: Value? = nil) {
-        self.wrapperState = .definition(.query(key: key, default: `default`))
+        wrapperState = .definition(.query(key: key, default: `default`))
     }
 
     public init(from decoder: Decoder) throws {
@@ -206,16 +206,16 @@ public struct Query<Value>: Codable, URLComponentWrapper where Value: LosslessSt
         }
         let queryKey = customKey ?? context.key.rawValue
         guard let stringValue = context.decoder.queryParameter(queryKey) else {
-            self.wrapperState = try .value(Self.provideDefaultValue(for: queryKey, defaultValue: defaultValue))
+            wrapperState = try .value(Self.provideDefaultValue(for: queryKey, defaultValue: defaultValue))
             return
         }
 
         guard let value = Value(stringValue) else {
             throw CodingError.invalidQueryValue(stringValue, forKey: queryKey)
         }
-        self.wrapperState = .value(value)
+        wrapperState = .value(value)
     }
-    
+
     private static func provideDefaultValue(for queryKey: String, defaultValue: Any?) throws -> Value {
         if let optionalType = Value.self as? OptionalProtocol.Type {
             return optionalType.provideNil() as! Value
@@ -248,14 +248,14 @@ public struct Query<Value>: Codable, URLComponentWrapper where Value: LosslessSt
     public var wrappedValue: Value {
         get {
             switch wrapperState {
-            case .value(let value):
+            case let .value(value):
                 return value
             case .definition:
                 fatalError()
             }
         }
         set {
-            self.wrapperState = .value(newValue)
+            wrapperState = .value(newValue)
         }
     }
 }

@@ -1,7 +1,7 @@
 internal final class URLDecoder: Decoder {
     let codingPath: [CodingKey] = []
-    let userInfo: [CodingUserInfoKey : Any] = [:]
-    
+    let userInfo: [CodingUserInfoKey: Any] = [:]
+
     let definitionMap: [_CodingKey: Definition]
     private let pathComponents: [String]
     private var pathComponentsOffset: Int
@@ -14,17 +14,17 @@ internal final class URLDecoder: Decoder {
     ) {
         self.definitionMap = definitionMap
         self.pathComponents = pathComponents
-        self.pathComponentsOffset = pathComponents.startIndex
+        pathComponentsOffset = pathComponents.startIndex
         self.queryParameter = queryParameter
     }
-    
+
     internal func consumePathComponent() -> String? {
         guard pathComponentsOffset < pathComponents.count else { return nil }
         defer { pathComponentsOffset += 1 }
         return pathComponents[pathComponentsOffset]
     }
 
-    func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
+    func container<Key>(keyedBy _: Key.Type) throws -> KeyedDecodingContainer<Key> where Key: CodingKey {
         KeyedDecodingContainer(Container<Key>(decoder: self, codingPath: codingPath))
     }
 
@@ -40,12 +40,12 @@ internal final class URLDecoder: Decoder {
         func contains(_ codingKey: Key) -> Bool {
             decoder.definitionMap[_CodingKey(codingKey)] != nil
         }
-        
+
         func decodeNil(forKey key: Key) throws -> Bool {
             !contains(key)
         }
 
-        func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T : Decodable {
+        func decode<T>(_: T.Type, forKey key: Key) throws -> T where T: Decodable {
             guard let definition = decoder.definitionMap[_CodingKey(key)] else {
                 fatalError("definitionMap should have '\(key)'")
             }
@@ -55,28 +55,28 @@ internal final class URLDecoder: Decoder {
             )
             return try T(from: context)
         }
-        
-        func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
+
+        func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type, forKey _: Key) throws -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
             fatalError("unavailable")
         }
-        
-        func nestedUnkeyedContainer(forKey key: Key) throws -> UnkeyedDecodingContainer {
+
+        func nestedUnkeyedContainer(forKey _: Key) throws -> UnkeyedDecodingContainer {
             fatalError("unavailable")
         }
-        
+
         func superDecoder() throws -> Decoder {
             fatalError("unavailable")
         }
-        
-        func superDecoder(forKey key: Key) throws -> Decoder {
+
+        func superDecoder(forKey _: Key) throws -> Decoder {
             fatalError("unavailable")
         }
     }
-    
+
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
         fatalError("unavailable")
     }
-    
+
     func singleValueContainer() throws -> SingleValueDecodingContainer {
         fatalError("unavailable")
     }
@@ -84,50 +84,51 @@ internal final class URLDecoder: Decoder {
 
 internal struct SingleValueDecoder: Decoder {
     let codingPath: [CodingKey]
-    let userInfo: [CodingUserInfoKey : Any]
+    let userInfo: [CodingUserInfoKey: Any]
     let key: _CodingKey
     let definition: Definition
     let decoder: URLDecoder
 
-    func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
+    func container<Key>(keyedBy _: Key.Type) throws -> KeyedDecodingContainer<Key> where Key: CodingKey {
         fatalError("unavailable")
     }
-    
+
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
         fatalError("unavailable")
     }
-    
+
     func singleValueContainer() throws -> SingleValueDecodingContainer {
         fatalError("unavailable")
     }
 }
 
-
 final class URLEncoder: Encoder {
     let codingPath: [CodingKey] = []
-    let userInfo: [CodingUserInfoKey : Any] = [:]
+    let userInfo: [CodingUserInfoKey: Any] = [:]
     let definitionMap: [_CodingKey: Definition]
     private(set) var pathComponents: [String] = []
     private(set) var queryParameters: [String: String] = [:]
-    
+
     init(definitionMap: [_CodingKey: Definition]) {
         self.definitionMap = definitionMap
     }
-    
+
     func add(_ key: String, value: String) {
         queryParameters[key] = value
     }
+
     func appendPath(_ component: String) {
         pathComponents.append(component)
     }
+
     func appendPath(components: [String]) {
         pathComponents.append(contentsOf: components)
     }
-    
-    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
+
+    func container<Key>(keyedBy _: Key.Type) -> KeyedEncodingContainer<Key> where Key: CodingKey {
         KeyedEncodingContainer(Container<Key>(codingPath: codingPath, encoder: self))
     }
-    
+
     final class Container<Key>: KeyedEncodingContainerProtocol where Key: CodingKey {
         let codingPath: [CodingKey]
         let encoder: URLEncoder
@@ -136,9 +137,9 @@ final class URLEncoder: Encoder {
             self.encoder = encoder
         }
 
-        func encodeNil(forKey key: Key) throws {}
-        
-        func encode<T>(_ value: T, forKey key: Key) throws where T : Encodable {
+        func encodeNil(forKey _: Key) throws {}
+
+        func encode<T>(_ value: T, forKey key: Key) throws where T: Encodable {
             guard let definition = encoder.definitionMap[_CodingKey(key)] else {
                 fatalError("definitionMap should have '\(key)'")
             }
@@ -148,20 +149,20 @@ final class URLEncoder: Encoder {
             )
             try value.encode(to: context)
         }
-        
-        func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey> where NestedKey : CodingKey {
+
+        func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type, forKey _: Key) -> KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
             fatalError("unavailable")
         }
-        
-        func nestedUnkeyedContainer(forKey key: Key) -> UnkeyedEncodingContainer {
+
+        func nestedUnkeyedContainer(forKey _: Key) -> UnkeyedEncodingContainer {
             fatalError("unavailable")
         }
-        
+
         func superEncoder() -> Encoder {
             fatalError("unavailable")
         }
-        
-        func superEncoder(forKey key: Key) -> Encoder {
+
+        func superEncoder(forKey _: Key) -> Encoder {
             fatalError("unavailable")
         }
     }
@@ -169,7 +170,7 @@ final class URLEncoder: Encoder {
     func unkeyedContainer() -> UnkeyedEncodingContainer {
         fatalError("unavailable")
     }
-    
+
     func singleValueContainer() -> SingleValueEncodingContainer {
         fatalError("unavailable")
     }
@@ -177,12 +178,12 @@ final class URLEncoder: Encoder {
 
 internal struct SingleValueEncoder: Encoder {
     let codingPath: [CodingKey]
-    let userInfo: [CodingUserInfoKey : Any]
+    let userInfo: [CodingUserInfoKey: Any]
     let key: _CodingKey
     let definition: Definition
     let encoder: URLEncoder
 
-    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
+    func container<Key>(keyedBy _: Key.Type) -> KeyedEncodingContainer<Key> where Key: CodingKey {
         fatalError("unavailable")
     }
 
