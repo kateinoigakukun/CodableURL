@@ -25,6 +25,6 @@ let url = URL(string: "https://api.github.com/users/kateinoigakukun/repos?type=a
 let decoded: ListUserRepository = try ListUserRepository.decode(url: url)
 prnit(decoded) // userName: "kateinoigakukun", type: .all, sort: nil
 
-let encoded: URL = t1.encode(baseURL: URL(string: "https://api.github.com")!)
+let encoded: URL = decoded.encode(baseURL: URL(string: "https://api.github.com")!)
 print(encoded) // "https://api.github.com/users/kateinoigakukun/repos?type=all"
 ```
