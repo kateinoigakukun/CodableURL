@@ -36,9 +36,9 @@ public extension CodableURL {
 }
 
 internal enum Definition {
-    case staticPaths([String])
-    case dynamicPath
-    case query(key: String?, default: Any?)
+    case staticPaths([String]?)
+    case dynamicPath(_StringLosslessConverter)
+    case query(key: String?, default: Any?, _StringLosslessConverter)
 }
 
 internal enum WrapperState<Value> {
@@ -104,6 +104,10 @@ public struct StaticPath: Codable, URLComponentWrapper {
         wrapperState = .definition(.staticPaths(components.map { String($0) }))
     }
 
+    public init() {
+        wrapperState = .definition(.staticPaths(nil))
+    }
+
     public init(from decoder: Decoder) throws {
         guard let context = decoder as? SingleValueDecoder else {
             throw CodingError.invalidState("Invalid context type: \(decoder)")
@@ -111,7 +115,7 @@ public struct StaticPath: Codable, URLComponentWrapper {
         guard case let .staticPaths(expectedComponents) = context.definition else {
             throw CodingError.invalidState("StaticPath should have .staticPath definition")
         }
-        var components = ArraySlice(expectedComponents)
+        var components = ArraySlice(expectedComponents ?? [context.key.rawValue])
         while let expected = components.first {
             guard let head = context.decoder.consumePathComponent() else {
                 throw CodingError.missingStaticPath(expected)
@@ -131,7 +135,7 @@ public struct StaticPath: Codable, URLComponentWrapper {
         guard case let .staticPaths(components) = context.definition else {
             throw CodingError.invalidState("StaticPath should have .staticPath definition")
         }
-        context.encoder.appendPath(components: components)
+        context.encoder.appendPath(components: components ?? [context.key.rawValue])
     }
 
     public var wrappedValue: Void {
@@ -139,24 +143,30 @@ public struct StaticPath: Codable, URLComponentWrapper {
     }
 }
 
+
+internal typealias _StringLosslessConverter = (
+    factory: (String) -> Any?, convert: (Any) -> String?
+)
+
 @propertyWrapper
-public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: LosslessStringConvertible {
+public struct DynamicPath<Value>: Codable, URLComponentWrapper {
     var wrapperState: WrapperState<Value>
-    public init() {
-        wrapperState = .definition(.dynamicPath)
+    public init() where Value: LosslessStringConvertible {
+        let converter: _StringLosslessConverter = (factory: { Value($0) }, convert: { ($0 as! Value).description })
+        wrapperState = .definition(.dynamicPath(converter))
     }
 
     public init(from decoder: Decoder) throws {
         guard let context = decoder as? SingleValueDecoder else {
             throw CodingError.invalidState("Invalid context type: \(decoder)")
         }
-        guard case .dynamicPath = context.definition else {
+        guard case let .dynamicPath(converter) = context.definition else {
             throw CodingError.invalidState("DynamicPath should have .dynamicPath definition")
         }
         guard let head = context.decoder.consumePathComponent() else {
             throw CodingError.missingDynamicPath(Value.self, forKey: context.key.rawValue)
         }
-        guard let value = Value(head) else {
+        guard let value = converter.factory(head) as? Value else {
             throw CodingError.invalidDynamicPathValue(head, forType: Value.self, forKey: context.key.rawValue)
         }
         wrapperState = .value(value)
@@ -166,13 +176,15 @@ public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: Loss
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
         }
-        guard case .dynamicPath = context.definition else {
+        guard case let .dynamicPath(converter) = context.definition else {
             throw CodingError.invalidState("DynamicPath should have .dynamicPath definition")
         }
         guard case let .value(value) = wrapperState else {
             throw CodingError.noValue(forKey: context.key.rawValue)
         }
-        context.encoder.appendPath(String(value))
+        if let path = converter.convert(value) {
+            context.encoder.appendPath(path)
+        }
     }
 
     public var wrappedValue: Value {
@@ -191,17 +203,45 @@ public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: Loss
 }
 
 @propertyWrapper
-public struct Query<Value>: Codable, URLComponentWrapper where Value: LosslessStringConvertible {
+public struct Query<Value>: Codable, URLComponentWrapper {
     var wrapperState: WrapperState<Value>
-    public init(_ key: String? = nil, default: Value? = nil) {
-        wrapperState = .definition(.query(key: key, default: `default`))
+    public init(_ key: String? = nil, default: Value? = nil) where Value: LosslessStringConvertible {
+        let converter: _StringLosslessConverter = (factory: { Value($0) }, convert: { ($0 as! Value).description })
+        wrapperState = .definition(.query(key: key, default: `default`, converter))
+    }
+
+    public init(_ key: String? = nil, default: Value? = nil) where Value: RawRepresentable, Value.RawValue == String {
+        let converter: _StringLosslessConverter = (factory: { Value(rawValue: $0) }, convert: { ($0 as! Value).rawValue })
+        wrapperState = .definition(.query(key: key, default: `default`, converter))
+    }
+
+    public init<T>(_ key: String? = nil, default: Value = nil) where Value == T?, T: LosslessStringConvertible {
+        let converter: _StringLosslessConverter = (
+            factory: { Optional.some(T($0)) as Any },
+            convert: {
+                guard let v = $0 as? T else { return nil }
+                return v.description
+            }
+        )
+        wrapperState = .definition(.query(key: key, default: `default`, converter))
+    }
+    
+    public init<T>(_ key: String? = nil, default: Value = nil) where Value == T?, T: RawRepresentable, T.RawValue == String {
+        let converter: _StringLosslessConverter = (
+            factory: { T(rawValue: $0) as Any },
+            convert: {
+                guard let v = $0 as? T else { return nil }
+                return v.rawValue
+            }
+        )
+        wrapperState = .definition(.query(key: key, default: `default`, converter))
     }
 
     public init(from decoder: Decoder) throws {
         guard let context = decoder as? SingleValueDecoder else {
             throw CodingError.invalidState("Invalid context type: \(decoder)")
         }
-        guard case let .query(customKey, defaultValue) = context.definition else {
+        guard case let .query(customKey, defaultValue, converter) = context.definition else {
             throw CodingError.invalidState("Query should have .query definition")
         }
         let queryKey = customKey ?? context.key.rawValue
@@ -210,7 +250,7 @@ public struct Query<Value>: Codable, URLComponentWrapper where Value: LosslessSt
             return
         }
 
-        guard let value = Value(stringValue) else {
+        guard let value = converter.factory(stringValue) as? Value else {
             throw CodingError.invalidQueryValue(stringValue, forKey: queryKey)
         }
         wrapperState = .value(value)
@@ -233,16 +273,20 @@ public struct Query<Value>: Codable, URLComponentWrapper where Value: LosslessSt
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
         }
-        guard case let .query(customKey, defaultValue) = context.definition else {
+        guard case let .query(customKey, defaultValue, converter) = context.definition else {
             throw CodingError.invalidState("Query should have .query definition")
         }
         let queryKey = customKey ?? context.key.rawValue
         guard case let .value(value) = wrapperState else {
             let value = try Self.provideDefaultValue(for: queryKey, defaultValue: defaultValue)
-            context.encoder.add(queryKey, value: String(value))
+            if let value = converter.convert(value) {
+                context.encoder.add(queryKey, value: value)
+            }
             return
         }
-        context.encoder.add(queryKey, value: String(value))
+        if let value = converter.convert(value) {
+            context.encoder.add(queryKey, value: value)
+        }
     }
 
     public var wrappedValue: Value {

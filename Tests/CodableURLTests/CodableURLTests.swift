@@ -186,5 +186,26 @@ final class CodableURLTests: XCTestCase {
         XCTAssertEqual(x1.param2, "2")
         XCTAssertEqual(x1.param3, 3)
         XCTAssertEqual(try encodePath(x1, base: baseURL), URL(string: "https://example.com/foo/1/bar/3?param2=2")!)
+        
+        struct ListUserRepository: CodableURL {
+            @StaticPath var users: Void
+            @DynamicPath var userName: String
+            @StaticPath var repos: Void
+            
+            enum `Type`: String {
+                case all, owner, member
+            }
+            @Query var type: Type?
+            
+            enum Sort: String {
+                case created, updated, pushed, fullName = "full_name"
+            }
+            @Query var sort: Sort?
+        }
+
+        let t1 = try decodePath(ListUserRepository.self, path: ["users", "kateinoigakukun", "repos"], query: ["type": "all"])
+        XCTAssertEqual(t1.userName, "kateinoigakukun")
+        guard case .all = t1.type else { XCTFail(); return }
+        XCTAssertEqual(try encodePath(t1, base: baseURL), URL(string: "https://example.com/users/kateinoigakukun/repos?type=all")!)
     }
 }
