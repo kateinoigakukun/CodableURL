@@ -4,8 +4,12 @@ public protocol CodableURL: Codable {
     init()
 }
 
-public extension CodableURL {
-    static func decode(pathComponents: [String], queryParameter: @escaping (String) -> String?) throws -> Self {
+extension CodableURL {
+    public static func decode(
+        pathComponents: [String], queryParameter: @escaping (String) -> String?
+    )
+        throws -> Self
+    {
         let decoder = URLDecoder(
             definitionMap: Self.definitionMap(),
             pathComponents: pathComponents,
@@ -14,7 +18,7 @@ public extension CodableURL {
         return try Self(from: decoder)
     }
 
-    func encode() throws -> (pathComponents: [String], queryParameters: [String: String]) {
+    public func encode() throws -> (pathComponents: [String], queryParameters: [String: String]) {
         let encoder = URLEncoder(definitionMap: Self.definitionMap())
         try encode(to: encoder)
         return (encoder.pathComponents, encoder.queryParameters)
@@ -24,7 +28,7 @@ public extension CodableURL {
         let children = Mirror(reflecting: Self()).children
         return children.reduce(into: [_CodingKey: Definition]()) { result, element in
             guard var key = element.label,
-                  let field = element.value as? DefinitionProvider
+                let field = element.value as? DefinitionProvider
             else {
                 return
             }
@@ -143,7 +147,6 @@ public struct StaticPath: Codable, URLComponentWrapper {
     }
 }
 
-
 internal typealias _StringLosslessConverter = (
     factory: (String) -> Any?, convert: (Any) -> String?
 )
@@ -152,7 +155,9 @@ internal typealias _StringLosslessConverter = (
 public struct DynamicPath<Value>: Codable, URLComponentWrapper {
     var wrapperState: WrapperState<Value>
     public init() where Value: LosslessStringConvertible {
-        let converter: _StringLosslessConverter = (factory: { Value($0) }, convert: { ($0 as! Value).description })
+        let converter: _StringLosslessConverter = (
+            factory: { Value($0) }, convert: { ($0 as! Value).description }
+        )
         wrapperState = .definition(.dynamicPath(converter))
     }
 
@@ -167,7 +172,8 @@ public struct DynamicPath<Value>: Codable, URLComponentWrapper {
             throw CodingError.missingDynamicPath(Value.self, forKey: context.key.rawValue)
         }
         guard let value = converter.factory(head) as? Value else {
-            throw CodingError.invalidDynamicPathValue(head, forType: Value.self, forKey: context.key.rawValue)
+            throw CodingError.invalidDynamicPathValue(
+                head, forType: Value.self, forKey: context.key.rawValue)
         }
         wrapperState = .value(value)
     }
@@ -205,17 +211,24 @@ public struct DynamicPath<Value>: Codable, URLComponentWrapper {
 @propertyWrapper
 public struct Query<Value>: Codable, URLComponentWrapper {
     var wrapperState: WrapperState<Value>
-    public init(_ key: String? = nil, default: Value? = nil) where Value: LosslessStringConvertible {
-        let converter: _StringLosslessConverter = (factory: { Value($0) }, convert: { ($0 as! Value).description })
+    public init(_ key: String? = nil, default: Value? = nil)
+    where Value: LosslessStringConvertible {
+        let converter: _StringLosslessConverter = (
+            factory: { Value($0) }, convert: { ($0 as! Value).description }
+        )
         wrapperState = .definition(.query(key: key, default: `default`, converter))
     }
 
-    public init(_ key: String? = nil, default: Value? = nil) where Value: RawRepresentable, Value.RawValue == String {
-        let converter: _StringLosslessConverter = (factory: { Value(rawValue: $0) }, convert: { ($0 as! Value).rawValue })
+    public init(_ key: String? = nil, default: Value? = nil)
+    where Value: RawRepresentable, Value.RawValue == String {
+        let converter: _StringLosslessConverter = (
+            factory: { Value(rawValue: $0) }, convert: { ($0 as! Value).rawValue }
+        )
         wrapperState = .definition(.query(key: key, default: `default`, converter))
     }
 
-    public init<T>(_ key: String? = nil, default: Value = nil) where Value == T?, T: LosslessStringConvertible {
+    public init<T>(_ key: String? = nil, default: Value = nil)
+    where Value == T?, T: LosslessStringConvertible {
         let converter: _StringLosslessConverter = (
             factory: { Optional.some(T($0)) as Any },
             convert: {
@@ -225,8 +238,9 @@ public struct Query<Value>: Codable, URLComponentWrapper {
         )
         wrapperState = .definition(.query(key: key, default: `default`, converter))
     }
-    
-    public init<T>(_ key: String? = nil, default: Value = nil) where Value == T?, T: RawRepresentable, T.RawValue == String {
+
+    public init<T>(_ key: String? = nil, default: Value = nil)
+    where Value == T?, T: RawRepresentable, T.RawValue == String {
         let converter: _StringLosslessConverter = (
             factory: { T(rawValue: $0) as Any },
             convert: {
@@ -246,7 +260,8 @@ public struct Query<Value>: Codable, URLComponentWrapper {
         }
         let queryKey = customKey ?? context.key.rawValue
         guard let stringValue = context.decoder.queryParameter(queryKey) else {
-            wrapperState = try .value(Self.provideDefaultValue(for: queryKey, defaultValue: defaultValue))
+            wrapperState = try .value(
+                Self.provideDefaultValue(for: queryKey, defaultValue: defaultValue))
             return
         }
 
@@ -256,7 +271,9 @@ public struct Query<Value>: Codable, URLComponentWrapper {
         wrapperState = .value(value)
     }
 
-    private static func provideDefaultValue(for queryKey: String, defaultValue: Any?) throws -> Value {
+    private static func provideDefaultValue(for queryKey: String, defaultValue: Any?) throws
+        -> Value
+    {
         if let optionalType = Value.self as? OptionalProtocol.Type {
             return optionalType.provideNil() as! Value
         }

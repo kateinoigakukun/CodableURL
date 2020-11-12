@@ -24,7 +24,8 @@ internal final class URLDecoder: Decoder {
         return pathComponents[pathComponentsOffset]
     }
 
-    func container<Key>(keyedBy _: Key.Type) throws -> KeyedDecodingContainer<Key> where Key: CodingKey {
+    func container<Key>(keyedBy _: Key.Type) throws -> KeyedDecodingContainer<Key>
+    where Key: CodingKey {
         KeyedDecodingContainer(Container<Key>(decoder: self, codingPath: codingPath))
     }
 
@@ -56,7 +57,9 @@ internal final class URLDecoder: Decoder {
             return try T(from: context)
         }
 
-        func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type, forKey _: Key) throws -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
+        func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type, forKey _: Key) throws
+            -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey
+        {
             fatalError("unavailable")
         }
 
@@ -89,7 +92,8 @@ internal struct SingleValueDecoder: Decoder {
     let definition: Definition
     let decoder: URLDecoder
 
-    func container<Key>(keyedBy _: Key.Type) throws -> KeyedDecodingContainer<Key> where Key: CodingKey {
+    func container<Key>(keyedBy _: Key.Type) throws -> KeyedDecodingContainer<Key>
+    where Key: CodingKey {
         fatalError("unavailable")
     }
 
@@ -150,7 +154,9 @@ final class URLEncoder: Encoder {
             try value.encode(to: context)
         }
 
-        func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type, forKey _: Key) -> KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
+        func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type, forKey _: Key)
+            -> KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey
+        {
             fatalError("unavailable")
         }
 

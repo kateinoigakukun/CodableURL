@@ -6,9 +6,9 @@ A declarative URL encoder and decoder.
 import CodableURL
 
 struct ListUserRepository: CodableURL {
-    @StaticPath var users: Void
+    @StaticPath  var users: Void
     @DynamicPath var userName: String
-    @StaticPath var repos: Void
+    @StaticPath  var repos: Void
     
     enum `Type`: String {
         case all, owner, member

@@ -6,19 +6,20 @@
         case invalidURLComponents(URLComponents)
     }
 
-    public extension CodableURL {
-        static func decode(url: Foundation.URL) throws -> Self {
+    extension CodableURL {
+        public static func decode(url: Foundation.URL) throws -> Self {
             guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
                 throw FoundationURLCodingError.failedToParseURL(url)
             }
             let queryMap = (components.queryItems ?? []).reduce(into: [:]) {
                 $0[$1.name] = $1.value
             }
-            return try Self.decode(pathComponents: url.pathComponents,
-                                   queryParameter: { key in queryMap[key] })
+            return try Self.decode(
+                pathComponents: url.pathComponents,
+                queryParameter: { key in queryMap[key] })
         }
 
-        func encode(baseURL: URL) throws -> URL {
+        public func encode(baseURL: URL) throws -> URL {
             let (pathComponents, queryParameters) = try encode()
             guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: true) else {
                 throw FoundationURLCodingError.failedToParseURL(baseURL)
