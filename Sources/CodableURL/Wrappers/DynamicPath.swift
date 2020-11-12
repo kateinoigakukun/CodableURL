@@ -1,5 +1,6 @@
 @propertyWrapper
-public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: ExpressibleByURLComponent {
+public struct DynamicPath<Value>: Codable, URLComponentWrapper
+where Value: ExpressibleByURLComponent {
     var wrapperState: WrapperState<Value>
     public init() where Value: LosslessStringConvertible {
         wrapperState = .definition(.dynamicPath)
@@ -30,7 +31,7 @@ public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: Expr
         guard case .dynamicPath = context.definition else {
             throw CodingError.invalidState("DynamicPath should have .dynamicPath definition")
         }
-        
+
         switch context.encoder.strategy {
         case .embedValue:
             guard case let .value(value) = wrapperState else {

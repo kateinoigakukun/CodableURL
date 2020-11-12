@@ -31,7 +31,8 @@ extension ExpressibleByURLComponent where Self: LosslessStringConvertible {
 
 extension String: ExpressibleByURLComponent {}
 
-extension ExpressibleByURLComponent where Self: RawRepresentable, Self.RawValue: ExpressibleByURLComponent {
+extension ExpressibleByURLComponent
+where Self: RawRepresentable, Self.RawValue: ExpressibleByURLComponent {
     public init?(urlComponent: String) {
         guard let rawValue = RawValue(urlComponent: urlComponent) else { return nil }
         self.init(rawValue: rawValue)
@@ -42,18 +43,18 @@ extension ExpressibleByURLComponent where Self: RawRepresentable, Self.RawValue:
     }
 }
 
-extension Int:   ExpressibleByURLComponent {}
-extension Int8:  ExpressibleByURLComponent {}
+extension Int: ExpressibleByURLComponent {}
+extension Int8: ExpressibleByURLComponent {}
 extension Int16: ExpressibleByURLComponent {}
 extension Int32: ExpressibleByURLComponent {}
 extension Int64: ExpressibleByURLComponent {}
-extension UInt:  ExpressibleByURLComponent {}
+extension UInt: ExpressibleByURLComponent {}
 extension UInt8: ExpressibleByURLComponent {}
 extension UInt16: ExpressibleByURLComponent {}
 extension UInt32: ExpressibleByURLComponent {}
 extension UInt64: ExpressibleByURLComponent {}
 
-extension Float:  ExpressibleByURLComponent {}
+extension Float: ExpressibleByURLComponent {}
 extension Double: ExpressibleByURLComponent {}
 
 extension Bool: ExpressibleByURLComponent {}

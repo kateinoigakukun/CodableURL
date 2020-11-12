@@ -23,9 +23,12 @@ extension CodableURL {
         try encode(to: encoder)
         return (encoder.pathComponents, encoder.queryParameters)
     }
-    
-    public static func placeholder(createPlaceholder: @escaping (_ field: String) -> String = { $0 }) throws -> (pathComponents: [String], queryParameters: [String: String]) {
-        let encoder = URLEncoder(definitionMap: Self.definitionMap(), strategy: .placeholder(createPlaceholder))
+
+    public static func placeholder(
+        createPlaceholder: @escaping (_ field: String) -> String = { $0 }
+    ) throws -> (pathComponents: [String], queryParameters: [String: String]) {
+        let encoder = URLEncoder(
+            definitionMap: Self.definitionMap(), strategy: .placeholder(createPlaceholder))
         let instance = Self()
         try instance.encode(to: encoder)
         return (encoder.pathComponents, encoder.queryParameters)
