@@ -19,8 +19,15 @@ extension CodableURL {
     }
 
     public func encode() throws -> (pathComponents: [String], queryParameters: [String: String]) {
-        let encoder = URLEncoder(definitionMap: Self.definitionMap())
+        let encoder = URLEncoder(definitionMap: Self.definitionMap(), strategy: .embedValue)
         try encode(to: encoder)
+        return (encoder.pathComponents, encoder.queryParameters)
+    }
+    
+    public static func placeholder(createPlaceholder: @escaping (_ field: String) -> String = { $0 }) throws -> (pathComponents: [String], queryParameters: [String: String]) {
+        let encoder = URLEncoder(definitionMap: Self.definitionMap(), strategy: .placeholder(createPlaceholder))
+        let instance = Self()
+        try instance.encode(to: encoder)
         return (encoder.pathComponents, encoder.queryParameters)
     }
 
@@ -41,8 +48,8 @@ extension CodableURL {
 
 internal enum Definition {
     case staticPaths([String]?)
-    case dynamicPath(_StringLosslessConverterBox)
-    case query(key: String?, default: Any?, _StringLosslessConverterBox)
+    case dynamicPath
+    case query(key: String?, default: Any?)
 }
 
 internal enum WrapperState<Value> {

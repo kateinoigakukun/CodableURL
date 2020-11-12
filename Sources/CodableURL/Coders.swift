@@ -106,15 +106,22 @@ internal struct SingleValueDecoder: Decoder {
     }
 }
 
+enum URLEncodingStrategy {
+    case embedValue
+    case placeholder((_ codingKey: String) -> String)
+}
+
 final class URLEncoder: Encoder {
     let codingPath: [CodingKey] = []
     let userInfo: [CodingUserInfoKey: Any] = [:]
     let definitionMap: [_CodingKey: Definition]
+    let strategy: URLEncodingStrategy
     private(set) var pathComponents: [String] = []
     private(set) var queryParameters: [String: String] = [:]
 
-    init(definitionMap: [_CodingKey: Definition]) {
+    init(definitionMap: [_CodingKey: Definition], strategy: URLEncodingStrategy) {
         self.definitionMap = definitionMap
+        self.strategy = strategy
     }
 
     func add(_ key: String, value: String) {

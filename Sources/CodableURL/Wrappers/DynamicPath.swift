@@ -1,40 +1,22 @@
-internal class _StringLosslessConverterBox {
-    let _factory: (String) -> Any?
-    let _convert: (Any) -> String?
-
-    internal init<T>(factory: @escaping (String) -> T?, convert: @escaping (T) -> String?) {
-        self._factory = factory
-        self._convert = { convert($0 as! T) }
-    }
-}
-internal class StringLosslessConverter<T>: _StringLosslessConverterBox {
-    func factory(_ string: String) -> T? { _factory(string) as! T? }
-    func convert(_ value: T) -> String? { _convert(value) }
-}
-
 @propertyWrapper
-public struct DynamicPath<Value>: Codable, URLComponentWrapper {
+public struct DynamicPath<Value>: Codable, URLComponentWrapper where Value: ExpressibleByURLComponent {
     var wrapperState: WrapperState<Value>
     public init() where Value: LosslessStringConvertible {
-        let converter: _StringLosslessConverterBox = StringLosslessConverter<Value>(
-            factory: { Value($0) }, convert: { $0.description }
-        )
-        wrapperState = .definition(.dynamicPath(converter))
+        wrapperState = .definition(.dynamicPath)
     }
 
     public init(from decoder: Decoder) throws {
         guard let context = decoder as? SingleValueDecoder else {
             throw CodingError.invalidState("Invalid context type: \(decoder)")
         }
-        guard case let .dynamicPath(converterBox) = context.definition else {
+        guard case .dynamicPath = context.definition else {
             throw CodingError.invalidState("DynamicPath should have .dynamicPath definition")
         }
-        let converter = converterBox as! StringLosslessConverter<Value>
 
         guard let head = context.decoder.consumePathComponent() else {
             throw CodingError.missingDynamicPath(Value.self, forKey: context.key.rawValue)
         }
-        guard let value = converter.factory(head) else {
+        guard let value = Value(urlComponent: head) else {
             throw CodingError.invalidDynamicPathValue(
                 head, forType: Value.self, forKey: context.key.rawValue)
         }
@@ -45,15 +27,20 @@ public struct DynamicPath<Value>: Codable, URLComponentWrapper {
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
         }
-        guard case let .dynamicPath(converterBox) = context.definition else {
+        guard case .dynamicPath = context.definition else {
             throw CodingError.invalidState("DynamicPath should have .dynamicPath definition")
         }
-        let converter = converterBox as! StringLosslessConverter<Value>
-        guard case let .value(value) = wrapperState else {
-            throw CodingError.noValue(forKey: context.key.rawValue)
-        }
-        if let path = converter.convert(value) {
-            context.encoder.appendPath(path)
+        
+        switch context.encoder.strategy {
+        case .embedValue:
+            guard case let .value(value) = wrapperState else {
+                throw CodingError.noValue(forKey: context.key.rawValue)
+            }
+            if let path = value.urlComponent {
+                context.encoder.appendPath(path)
+            }
+        case .placeholder(let createPlaceholder):
+            context.encoder.appendPath(createPlaceholder(context.key.rawValue))
         }
     }
 

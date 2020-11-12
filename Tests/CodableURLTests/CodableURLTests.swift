@@ -189,6 +189,19 @@ final class CodableURLTests: XCTestCase {
             try encodePath(x5, base: baseURL), URL(string: "https://example.com?param1=2")!)
     }
 
+    func testPlaceholder() throws {
+        struct X1: CodableURL {
+            @StaticPath("foo") var foo: Void
+            @DynamicPath var param1: Int
+            @Query var param2: String
+            @StaticPath("bar") var bar: Void
+            @DynamicPath var param3: Int
+        }
+        let (components, queryParams) = try X1.placeholder(createPlaceholder: { ":\($0)" })
+        XCTAssertEqual(components, ["foo", ":param1", "bar", ":param3"])
+        XCTAssertEqual(queryParams, ["param2": ":param2"])
+    }
+
     func testComposition() throws {
         struct X1: CodableURL {
             @StaticPath("foo") var foo: Void
@@ -211,13 +224,13 @@ final class CodableURLTests: XCTestCase {
             @DynamicPath var userName: String
             @StaticPath var repos: Void
 
-            enum `Type`: String {
+            enum `Type`: String, ExpressibleByURLComponent {
                 case all, owner, member
             }
 
             @Query var type: Type?
 
-            enum Sort: String {
+            enum Sort: String, ExpressibleByURLComponent {
                 case created, updated, pushed
                 case fullName = "full_name"
             }

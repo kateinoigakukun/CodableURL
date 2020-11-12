@@ -1,48 +1,18 @@
 @propertyWrapper
-public struct Query<Value>: Codable, URLComponentWrapper {
+public struct Query<Value>: Codable, URLComponentWrapper where Value: ExpressibleByURLComponent {
     var wrapperState: WrapperState<Value>
-    public init(_ key: String? = nil, default: Value? = nil)
-    where Value: LosslessStringConvertible {
-        let converter = StringLosslessConverter<Value>(
-            factory: { Value($0) }, convert: { $0.description }
-        )
-        wrapperState = .definition(.query(key: key, default: `default`, converter))
-    }
 
-    public init(_ key: String? = nil, default: Value? = nil)
-    where Value: RawRepresentable, Value.RawValue == String {
-        let converter = StringLosslessConverter<Value>(
-            factory: { Value(rawValue: $0) }, convert: { $0.rawValue }
-        )
-        wrapperState = .definition(.query(key: key, default: `default`, converter))
-    }
-
-    public init<T>(_ key: String? = nil, default: Value = nil)
-    where Value == T?, T: LosslessStringConvertible {
-        let converter = StringLosslessConverter<Value>(
-            factory: { T($0) },
-            convert: { $0?.description }
-        )
-        wrapperState = .definition(.query(key: key, default: `default`, converter))
-    }
-
-    public init<T>(_ key: String? = nil, default: Value = nil)
-    where Value == T?, T: RawRepresentable, T.RawValue == String {
-        let converter = StringLosslessConverter<Value>(
-            factory: { T(rawValue: $0) },
-            convert: { $0?.rawValue }
-        )
-        wrapperState = .definition(.query(key: key, default: `default`, converter))
+    public init(_ key: String? = nil, default: Value? = nil) {
+        wrapperState = .definition(.query(key: key, default: `default`))
     }
 
     public init(from decoder: Decoder) throws {
         guard let context = decoder as? SingleValueDecoder else {
             throw CodingError.invalidState("Invalid context type: \(decoder)")
         }
-        guard case let .query(customKey, defaultValue, converterBox) = context.definition else {
+        guard case let .query(customKey, defaultValue) = context.definition else {
             throw CodingError.invalidState("Query should have .query definition")
         }
-        let converter = converterBox as! StringLosslessConverter<Value>
         let queryKey = customKey ?? context.key.rawValue
         guard let stringValue = context.decoder.queryParameter(queryKey) else {
             wrapperState = try .value(
@@ -50,7 +20,7 @@ public struct Query<Value>: Codable, URLComponentWrapper {
             return
         }
 
-        guard let value = converter.factory(stringValue) else {
+        guard let value = Value(urlComponent: stringValue) else {
             throw CodingError.invalidQueryValue(stringValue, forKey: queryKey)
         }
         wrapperState = .value(value)
@@ -75,21 +45,27 @@ public struct Query<Value>: Codable, URLComponentWrapper {
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
         }
-        guard case let .query(customKey, defaultValue, converterBox) = context.definition else {
+        guard case let .query(customKey, defaultValue) = context.definition else {
             throw CodingError.invalidState("Query should have .query definition")
         }
-        let converter = converterBox as! StringLosslessConverter<Value>
 
         let queryKey = customKey ?? context.key.rawValue
-        guard case let .value(value) = wrapperState else {
-            let value = try Self.provideDefaultValue(for: queryKey, defaultValue: defaultValue)
-            if let value = converter.convert(value) {
+
+        switch context.encoder.strategy {
+        case .embedValue:
+            guard case let .value(value) = wrapperState else {
+                let value = try Self.provideDefaultValue(for: queryKey, defaultValue: defaultValue)
+                if let value = value.urlComponent {
+                    context.encoder.add(queryKey, value: value)
+                }
+                return
+            }
+            if let value = value.urlComponent {
                 context.encoder.add(queryKey, value: value)
             }
+        case .placeholder(let createPlaceholder):
+            context.encoder.add(queryKey, value: createPlaceholder(context.key.rawValue))
             return
-        }
-        if let value = converter.convert(value) {
-            context.encoder.add(queryKey, value: value)
         }
     }
 
