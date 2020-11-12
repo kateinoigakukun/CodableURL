@@ -49,4 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: swift test --enable-code-coverage
+      - run: echo "SWIFT_CODECOV_PATH=$(swift test --show-codecov-path)" >> $GITHUB_ENV
       - uses: codecov/codecov-action@v1
+        with:
+          file: ${{ env.SWIFT_CODECOV_PATH }}
