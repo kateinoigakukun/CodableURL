@@ -41,8 +41,8 @@ extension CodableURL {
 
 internal enum Definition {
     case staticPaths([String]?)
-    case dynamicPath(_StringLosslessConverter)
-    case query(key: String?, default: Any?, _StringLosslessConverter)
+    case dynamicPath(_StringLosslessConverterBox)
+    case query(key: String?, default: Any?, _StringLosslessConverterBox)
 }
 
 internal enum WrapperState<Value> {

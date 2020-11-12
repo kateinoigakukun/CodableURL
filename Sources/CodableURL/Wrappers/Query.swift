@@ -3,40 +3,34 @@ public struct Query<Value>: Codable, URLComponentWrapper {
     var wrapperState: WrapperState<Value>
     public init(_ key: String? = nil, default: Value? = nil)
     where Value: LosslessStringConvertible {
-        let converter: _StringLosslessConverter = (
-            factory: { Value($0) }, convert: { ($0 as! Value).description }
+        let converter = StringLosslessConverter<Value>(
+            factory: { Value($0) }, convert: { $0.description }
         )
         wrapperState = .definition(.query(key: key, default: `default`, converter))
     }
 
     public init(_ key: String? = nil, default: Value? = nil)
     where Value: RawRepresentable, Value.RawValue == String {
-        let converter: _StringLosslessConverter = (
-            factory: { Value(rawValue: $0) }, convert: { ($0 as! Value).rawValue }
+        let converter = StringLosslessConverter<Value>(
+            factory: { Value(rawValue: $0) }, convert: { $0.rawValue }
         )
         wrapperState = .definition(.query(key: key, default: `default`, converter))
     }
 
     public init<T>(_ key: String? = nil, default: Value = nil)
     where Value == T?, T: LosslessStringConvertible {
-        let converter: _StringLosslessConverter = (
-            factory: { Optional.some(T($0)) as Any },
-            convert: {
-                guard let v = $0 as? T else { return nil }
-                return v.description
-            }
+        let converter = StringLosslessConverter<Value>(
+            factory: { T($0) },
+            convert: { $0?.description }
         )
         wrapperState = .definition(.query(key: key, default: `default`, converter))
     }
 
     public init<T>(_ key: String? = nil, default: Value = nil)
     where Value == T?, T: RawRepresentable, T.RawValue == String {
-        let converter: _StringLosslessConverter = (
-            factory: { T(rawValue: $0) as Any },
-            convert: {
-                guard let v = $0 as? T else { return nil }
-                return v.rawValue
-            }
+        let converter = StringLosslessConverter<Value>(
+            factory: { T(rawValue: $0) },
+            convert: { $0?.rawValue }
         )
         wrapperState = .definition(.query(key: key, default: `default`, converter))
     }
@@ -45,9 +39,10 @@ public struct Query<Value>: Codable, URLComponentWrapper {
         guard let context = decoder as? SingleValueDecoder else {
             throw CodingError.invalidState("Invalid context type: \(decoder)")
         }
-        guard case let .query(customKey, defaultValue, converter) = context.definition else {
+        guard case let .query(customKey, defaultValue, converterBox) = context.definition else {
             throw CodingError.invalidState("Query should have .query definition")
         }
+        let converter = converterBox as! StringLosslessConverter<Value>
         let queryKey = customKey ?? context.key.rawValue
         guard let stringValue = context.decoder.queryParameter(queryKey) else {
             wrapperState = try .value(
@@ -55,7 +50,7 @@ public struct Query<Value>: Codable, URLComponentWrapper {
             return
         }
 
-        guard let value = converter.factory(stringValue) as? Value else {
+        guard let value = converter.factory(stringValue) else {
             throw CodingError.invalidQueryValue(stringValue, forKey: queryKey)
         }
         wrapperState = .value(value)
@@ -80,9 +75,11 @@ public struct Query<Value>: Codable, URLComponentWrapper {
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
         }
-        guard case let .query(customKey, defaultValue, converter) = context.definition else {
+        guard case let .query(customKey, defaultValue, converterBox) = context.definition else {
             throw CodingError.invalidState("Query should have .query definition")
         }
+        let converter = converterBox as! StringLosslessConverter<Value>
+
         let queryKey = customKey ?? context.key.rawValue
         guard case let .value(value) = wrapperState else {
             let value = try Self.provideDefaultValue(for: queryKey, defaultValue: defaultValue)
