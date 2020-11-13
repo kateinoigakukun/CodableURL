@@ -2,7 +2,7 @@
 public struct DynamicPath<Value>: Codable, URLComponentWrapper
 where Value: ExpressibleByURLComponent {
     var wrapperState: WrapperState<Value>
-    public init() where Value: LosslessStringConvertible {
+    public init() {
         wrapperState = .definition(.dynamicPath)
     }
 
