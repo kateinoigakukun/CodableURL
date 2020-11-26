@@ -241,12 +241,14 @@ final class CodableURLTests: XCTestCase {
             @Query(default: .asc) var direction: Direction
         }
 
-        let url = URL(string: "https://api.github.com/users/kateinoigakukun/repos?type=all")!
-        let decoded: ListUserRepository = try ListUserRepository.decode(url: url)
-        print(decoded)  // ListUserRepository(userName: "kateinoigakukun", type: .all, sort: nil, direction: .asc)
+        do {
+            let url = URL(string: "https://api.github.com/users/kateinoigakukun/repos?type=all")!
+            let decoded: ListUserRepository = try ListUserRepository.decode(url: url)
+            print(decoded)  // ListUserRepository(userName: "kateinoigakukun", type: .all, sort: nil, direction: .asc)
 
-        let encoded: URL = try decoded.encode(baseURL: URL(string: "https://api.github.com")!)
-        print(encoded)  // "https://api.github.com/users/kateinoigakukun/repos?type=all&direction=asc"
+            let encoded: URL = try decoded.encode(baseURL: URL(string: "https://api.github.com")!)
+            print(encoded)  // "https://api.github.com/users/kateinoigakukun/repos?type=all&direction=asc"
+        }
 
         let t1 = try decodePath(
             ListUserRepository.self, path: ["users", "kateinoigakukun", "repos"],
@@ -256,8 +258,13 @@ final class CodableURLTests: XCTestCase {
             XCTFail()
             return
         }
+        let encoded = try encodePath(t1, base: baseURL)
         XCTAssertEqual(
-            try encodePath(t1, base: baseURL),
-            URL(string: "https://example.com/users/kateinoigakukun/repos?direction=asc&type=all")!)
+            encoded.pathComponents,
+            ["/", "users", "kateinoigakukun", "repos"]
+        )
+        let encodedQuery = URLComponents(url: encoded, resolvingAgainstBaseURL: false)?
+            .queryItems?.reduce(into: [:]) { $0[$1.name] = $1.value }
+        XCTAssertEqual(encodedQuery, ["type": "all", "direction": "asc"])
     }
 }
