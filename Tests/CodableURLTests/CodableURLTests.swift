@@ -258,6 +258,6 @@ final class CodableURLTests: XCTestCase {
         }
         XCTAssertEqual(
             try encodePath(t1, base: baseURL),
-            URL(string: "https://example.com/users/kateinoigakukun/repos?type=all")!)
+            URL(string: "https://example.com/users/kateinoigakukun/repos?direction=asc&type=all")!)
     }
 }
