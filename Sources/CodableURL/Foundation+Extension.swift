@@ -15,7 +15,7 @@
                 $0[$1.name] = $1.value
             }
             return try Self.decode(
-                pathComponents: url.pathComponents,
+                pathComponents: Array(url.pathComponents.dropFirst()),
                 queryParameter: { key in queryMap[key] })
         }
 

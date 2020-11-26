@@ -24,7 +24,9 @@ extension CodableURL {
         return (encoder.pathComponents, encoder.queryParameters)
     }
 
-    public static func placeholder() throws -> (pathComponents: [String], queryParameters: [String: String]) {
+    public static func placeholder() throws -> (
+        pathComponents: [String], queryParameters: [String: String]
+    ) {
         let encoder = URLEncoder(
             definitionMap: Self.definitionMap(), strategy: .placeholder)
         let instance = Self()

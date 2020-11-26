@@ -3,7 +3,8 @@ public struct Query<Value>: Codable, URLComponentWrapper where Value: Expressibl
     var wrapperState: WrapperState<Value>
 
     public init(_ key: String? = nil, default: Value? = nil, placeholder: String? = nil) {
-        wrapperState = .definition(.query(key: key, default: `default`, customPlaceholder: placeholder))
+        wrapperState = .definition(
+            .query(key: key, default: `default`, customPlaceholder: placeholder))
     }
 
     public init(from decoder: Decoder) throws {
@@ -45,7 +46,8 @@ public struct Query<Value>: Codable, URLComponentWrapper where Value: Expressibl
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
         }
-        guard case let .query(customKey, defaultValue, customPlaceholder) = context.definition else {
+        guard case let .query(customKey, defaultValue, customPlaceholder) = context.definition
+        else {
             throw CodingError.invalidState("Query should have .query definition")
         }
 

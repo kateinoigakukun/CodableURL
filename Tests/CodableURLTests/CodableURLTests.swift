@@ -224,25 +224,35 @@ final class CodableURLTests: XCTestCase {
             @DynamicPath var userName: String
             @StaticPath var repos: Void
 
-            enum `Type`: String, ExpressibleByURLComponent {
+            enum Kind: String, ExpressibleByURLComponent {
                 case all, owner, member
             }
-
-            @Query var type: Type?
+            @Query("type") var kind: Kind?
 
             enum Sort: String, ExpressibleByURLComponent {
                 case created, updated, pushed
                 case fullName = "full_name"
             }
-
             @Query var sort: Sort?
+
+            enum Direction: String, ExpressibleByURLComponent {
+                case asc, desc
+            }
+            @Query(default: .asc) var direction: Direction
         }
+
+        let url = URL(string: "https://api.github.com/users/kateinoigakukun/repos?type=all")!
+        let decoded: ListUserRepository = try ListUserRepository.decode(url: url)
+        print(decoded)  // ListUserRepository(userName: "kateinoigakukun", type: .all, sort: nil, direction: .asc)
+
+        let encoded: URL = try decoded.encode(baseURL: URL(string: "https://api.github.com")!)
+        print(encoded)  // "https://api.github.com/users/kateinoigakukun/repos?type=all&direction=asc"
 
         let t1 = try decodePath(
             ListUserRepository.self, path: ["users", "kateinoigakukun", "repos"],
             query: ["type": "all"])
         XCTAssertEqual(t1.userName, "kateinoigakukun")
-        guard case .all = t1.type else {
+        guard case .all = t1.kind else {
             XCTFail()
             return
         }
