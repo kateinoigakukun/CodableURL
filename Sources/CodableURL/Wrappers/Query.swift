@@ -2,15 +2,15 @@
 public struct Query<Value>: Codable, URLComponentWrapper where Value: ExpressibleByURLComponent {
     var wrapperState: WrapperState<Value>
 
-    public init(_ key: String? = nil, default: Value? = nil) {
-        wrapperState = .definition(.query(key: key, default: `default`))
+    public init(_ key: String? = nil, default: Value? = nil, placeholder: String? = nil) {
+        wrapperState = .definition(.query(key: key, default: `default`, customPlaceholder: placeholder))
     }
 
     public init(from decoder: Decoder) throws {
         guard let context = decoder as? SingleValueDecoder else {
             throw CodingError.invalidState("Invalid context type: \(decoder)")
         }
-        guard case let .query(customKey, defaultValue) = context.definition else {
+        guard case let .query(customKey, defaultValue, _) = context.definition else {
             throw CodingError.invalidState("Query should have .query definition")
         }
         let queryKey = customKey ?? context.key.rawValue
@@ -45,7 +45,7 @@ public struct Query<Value>: Codable, URLComponentWrapper where Value: Expressibl
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
         }
-        guard case let .query(customKey, defaultValue) = context.definition else {
+        guard case let .query(customKey, defaultValue, customPlaceholder) = context.definition else {
             throw CodingError.invalidState("Query should have .query definition")
         }
 
@@ -63,8 +63,9 @@ public struct Query<Value>: Codable, URLComponentWrapper where Value: Expressibl
             if let value = value.urlComponent {
                 context.encoder.add(queryKey, value: value)
             }
-        case .placeholder(let createPlaceholder):
-            context.encoder.add(queryKey, value: createPlaceholder(context.key.rawValue))
+        case .placeholder:
+            let placeholder = customPlaceholder ?? ":\(context.key.rawValue)"
+            context.encoder.add(queryKey, value: placeholder)
             return
         }
     }

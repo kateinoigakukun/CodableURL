@@ -2,8 +2,8 @@
 public struct DynamicPath<Value>: Codable, URLComponentWrapper
 where Value: ExpressibleByURLComponent {
     var wrapperState: WrapperState<Value>
-    public init() {
-        wrapperState = .definition(.dynamicPath)
+    public init(placeholder: String? = nil) {
+        wrapperState = .definition(.dynamicPath(customPlaceholder: placeholder))
     }
 
     public init(from decoder: Decoder) throws {
@@ -28,7 +28,7 @@ where Value: ExpressibleByURLComponent {
         guard let context = encoder as? SingleValueEncoder else {
             throw CodingError.invalidState("Invalid context type: \(encoder)")
         }
-        guard case .dynamicPath = context.definition else {
+        guard case .dynamicPath(let customPlaceholder) = context.definition else {
             throw CodingError.invalidState("DynamicPath should have .dynamicPath definition")
         }
 
@@ -40,8 +40,9 @@ where Value: ExpressibleByURLComponent {
             if let path = value.urlComponent {
                 context.encoder.appendPath(path)
             }
-        case .placeholder(let createPlaceholder):
-            context.encoder.appendPath(createPlaceholder(context.key.rawValue))
+        case .placeholder:
+            let placeholder = customPlaceholder ?? ":\(context.key.rawValue)"
+            context.encoder.appendPath(placeholder)
         }
     }
 

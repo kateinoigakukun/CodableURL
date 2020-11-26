@@ -197,7 +197,7 @@ final class CodableURLTests: XCTestCase {
             @StaticPath("bar") var bar: Void
             @DynamicPath var param3: Int
         }
-        let (components, queryParams) = try X1.placeholder(createPlaceholder: { ":\($0)" })
+        let (components, queryParams) = try X1.placeholder()
         XCTAssertEqual(components, ["foo", ":param1", "bar", ":param3"])
         XCTAssertEqual(queryParams, ["param2": ":param2"])
     }

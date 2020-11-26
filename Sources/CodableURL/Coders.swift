@@ -108,7 +108,7 @@ internal struct SingleValueDecoder: Decoder {
 
 enum URLEncodingStrategy {
     case embedValue
-    case placeholder((_ codingKey: String) -> String)
+    case placeholder
 }
 
 final class URLEncoder: Encoder {
