@@ -25,7 +25,7 @@
                 throw FoundationURLCodingError.failedToParseURL(baseURL)
             }
             if !pathComponents.isEmpty {
-                components.path = "/" + pathComponents.joined(separator: "/")
+                components.path = ([components.path] + pathComponents).joined(separator: "/")
             }
             if !queryParameters.isEmpty {
                 components.queryItems = queryParameters.map {
